@@ -1,26 +1,30 @@
-const catchAsyncError = require('../middleware/catchAsyncError');
 const ProductModel = require('../Models/products');
 const ErrHandler = require('../utils/errorHandler');
+const dotenv = require('dotenv'); //env variables
+dotenv.config();
+const { RequestSuccess, RequestFailure } = require('../utils/Status')
+const ApiFeature = require('../utils/apiFeatures');
 
 // file uploader 
 const createProduct = async (req, res, next) => {
-    console.log(req.body)
-    // const one = new Product(req.body)
-    const createProducts = await ProductModel.create(req.body)
-    res.status(201).json({status: true, result: createProducts})
-    if (!createProducts) {
-        return next(new ErrHandler('Product not found', 404))
-    }
+    try {
+        const createProducts = await ProductModel.save(req.body)
+        if (!createProducts) next(new ErrHandler('Product not found', 404))
+        RequestSuccess(res, 201, createProducts)
+    } catch (e) { next(e.message) }
 };
 
 // all Product data
 
 const showAllProduct = async (req, res) => {
     try {
-        const data = await ProductModel.find();
-        res.status(200).send(data)
-    } catch (e) { res.status(400).send(e) }
+        const apiFeature = new ApiFeature(ProductModel.find(), req.query).search().pagination();     //in pagination function pass limit value 
+        const data = await apiFeature.query;
+        if (!data) RequestFailure(res, 404, 'Products not found')
+        else RequestSuccess(res, 200, data)
+    } catch (e) { RequestFailure(res, 500, e.message) }
 }
+
 
 // Product data by id 
 
@@ -28,28 +32,21 @@ const showOneProduct = async (req, res) => {
     try {
         const _id = req.params.id
         const data = await ProductModel.findById(_id);
-        if (!data) return next(new ErrHandler('Product not found', 404))
-        else { res.status(200).json({ status: true, result: data }) }
-    } catch (e) { res.status(500).json({ status: false, result: e }) }
+        if (!data) next(new ErrHandler('Product not found', 404))
+        else RequestSuccess(res, 200, data)
+    } catch (e) { RequestFailure(res, 500, e.message) }
 }
 
 // update Product
 const updateProduct = async (req, res) => {
     try {
-        const one = {
-            thumbnail: req.file.path,
-            title: req.body.title,
-            description: req.body.description,
-            author: req.body.author,
-        }
-        console.log(req.body, one)
         const _id = req.params.id
-        const data = await ProductModel.findByIdAndUpdate(_id, one, {
+        const data = await ProductModel.findByIdAndUpdate(_id, req.body, {
             new: true
         });
         if (!_id) return next(new ErrHandler('Product not found', 404))
-        else { res.status(200).json({ status: true, result: data }) }
-    } catch (e) { res.status(500).json({ status: false, result: e.message }) }
+        else RequestSuccess(res, 200, data)
+    } catch (e) { RequestFailure(res, 500, e.message) }
 }
 
 // delete Product 
@@ -58,7 +55,8 @@ const deleteProduct = async (req, res) => {
         const _id = req.params.id
         const data = await ProductModel.findByIdAndDelete(_id);
         if (!_id) return next(new ErrHandler('Product not found', 404))
-        else { res.status(200).json({ status: true, result: data }) }
-    } catch (e) { res.status(500).json({ status: false, result: e.message }) }
+        else RequestSuccess(res, 200, data)
+    } catch (e) { RequestFailure(res, 500, e.message) }
 }
+
 module.exports = { createProduct, showAllProduct, showOneProduct, updateProduct, deleteProduct }

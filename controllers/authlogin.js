@@ -1,59 +1,132 @@
-const Users = require("../models/authlogin");
-const jwt = require('jsonwebtoken')
-const tokenSecret = 'my-token-secret'
-const bcrypt = require('bcrypt')
-const rounds = 10
+const { RequestSuccess, RequestFailure } = require('../utils/Status')
+const dotenv = require('dotenv'); //env variables
+dotenv.config();
+const crypto = require('crypto')
+const login = require('../models/authlogin');
+const sendToken = require('../utils/sendToken');
+const sendEmail = require('../utils/sendEmail.js');
 
-const registerUser = async (req, res) => {
-    try {
-        bcrypt.hash(req.body.password, rounds, async (err, hash) => {
-            if (err) res.status(500).json(err)
-            else {
-                const user = new Users({
-                    email: req.body.email,
-                    password: hash,
-                })
-                const createBlog = await user.save()
-                res.status(201).json({
-                    status: true, accessToken: gerenateToken(createBlog)
-                })
-            }
-        })
-    } catch (e) {
-        res.status(400).json({ status: false, result: e.message })
-    }
-}
-const userData = (req, res) => {
-    try {
-        Users.findOne({ email: req.body.email }).then(user => {
-            if (!user) res.status(500).json({ error: 'No user found.' })
-            else {
-                bcrypt.compare(req.body.password, user.password, async (err, match) => {
-                    if (err) res.status(500).json(err)
-                    else if (match) res.status(201).json({
-                        status: true, accessToken: gerenateToken(user)
-                    })
-                    else res.status(403).json({ error: 'Password do not match' })
-                })
-            }
-        })
-    } catch (e) {
-        res.status(400).json({ status: false, result: e.message })
-    }
-}
-const usersData = (req, res) => {
-    try {
-        Users.find().then((data) => {
-            res.status(201).json({
-                status: true, data
-            })
-        })
-    } catch (e) {
-        res.status(500).json(e)
-    }
-}
-gerenateToken = (user) => {
-    return jwt.sign({ data: user }, tokenSecret)
+
+// login 
+exports.registerUser = async (req, res, next) => {
+  const { email, password } = req.body
+  if (!email || !password) RequestFailure(res, 400, 'Enter email and password')
+
+  const userData = new login({ email, password })
+
+  await userData.save().then(createBlog => {
+    if (!createBlog) RequestFailure(res, 400, err?.message || 'Bad request')
+    sendToken(createBlog, 201, res)
+  }).catch(err => RequestFailure(res, 400, err?.message || 'Bad request'))
 }
 
-module.exports = { registerUser, userData, usersData }
+
+
+// all users
+exports.allUsers = async (req, res, next) => {
+  await login.find().then(data => {
+    if (!data) RequestFailure(res, 404, 'Users not found')
+    RequestSuccess(res, 200, data)
+  }).catch((err) => RequestFailure(res, 404, err?.message || 'Bad request'));
+}
+
+
+
+// single user data
+exports.loginUser = async (req, res, next) => {
+  console.log(req.body)
+  await login.findOne({ email: req.body.email }).then(async (user) => {
+    if (!user) RequestFailure(res, 404, 'User not found')
+    const result = await user.comparePassword(req.body?.password)
+    if (!result) RequestFailure(res, 404, 'Invalid email or password')
+    sendToken(user, 201, res)
+  }).catch((e) => RequestFailure(res, 500, e?.message || 'Bad request'))
+}
+
+// profile 
+exports.profileDetails = async (req, res, next) => {
+  console.log(req, req.user)
+  await login.findById(req.user.id).then((user) => {
+    if (!user) RequestFailure(res, 404, 'User not found')
+    RequestSuccess(res, 200, user)
+  }).catch((e) => RequestFailure(res, 500, e?.message || 'Bad request'))
+}
+
+
+// logout user
+exports.logout = (req, res, next) => {
+  try {
+    res.cookie('token', null, {
+      expires: new Date(Date.now()),
+      httpOnly: true
+    })
+    RequestSuccess(res, 200, { message: 'Logged out' })
+  } catch (e) { RequestFailure(res, 500, e?.message || 'Bad request') }
+}
+
+//  Forget Password
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    await login.findOne({ email: req.body.email }).then(async (user) => {
+      if (!user) RequestFailure(res, 404, 'User not found')
+
+      // Get ResetPassword Token
+      const resetToken = user.getResetPasswordToken();
+      await user.save({ validateBeforeState: false })
+      const resetPasswordUrl = `${req.protocol}://${req.get('host')}/auth/password/reset/${resetToken}`
+      const message = `Your password rest token is :- \n\n ${resetPasswordUrl} \n\n if you have not requested this email then , please ignore it.`
+
+      try {
+        await sendEmail.sendEmail({
+          email: user.email,
+          subject: `Products password Recovery`,
+          message
+        })
+        RequestSuccess(res, 200, { message: `Email send to ${user?.email} successfully ` })
+
+      } catch (err) {
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpire = undefined;
+        await user.save({ validateBeforeState: false })
+        RequestFailure(res, 500, err?.message || 'Bad request')
+      }
+    })
+  } catch (e) { RequestFailure(res, 500, e?.message || 'Bad request') }
+}
+
+//  Forget Password
+exports.resetPassword = async (req, res, next) => {
+  try {
+    const resetPasswordToken = crypto
+      .createHash("sha256") //algo for pattern
+      .update(req.params.token)
+      .digest('hex')
+
+    const user = await login.findOne({
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() }
+    });
+    if (!user) RequestFailure(res, 404, 'Reset password token is invalid or has been expired')
+    if (req.body.password != req.body.confirmPassword) RequestFailure(res, 400, 'Password does not matched')
+    user.password = req.body.password
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save()
+    sendToken(user, 200, res)
+
+  } catch (e) { RequestFailure(res, 500, e?.message || 'Bad request') }
+}
+
+// update password (old ,new ,confirm password)
+exports.updatePassword = async (req, res, next) => {
+  console.log(req.user)
+  await login.findById(req.user.id).then(async (user) => {
+    if (!user) RequestFailure(res, 404, 'User not found')
+    const isPasswordMatched = await user.comparePassword(req.body.oldPassword)
+    console.log(user,isPasswordMatched,req.body)
+    if (!isPasswordMatched) RequestFailure(res, 400, 'Old password is incorrect')
+    else if (req.body?.newPassword !== req.body?.confirmPassword) RequestFailure(res, 400, "Password doesn't match.")
+    user.password = req.body?.newPassword
+    await user.save();
+  }).catch((e) => RequestFailure(res, 500, e?.message || 'Bad request'))
+}

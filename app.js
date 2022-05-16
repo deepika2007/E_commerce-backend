@@ -1,10 +1,15 @@
 const express = require('express');
+const app = express();
 var bodyParser = require('body-parser');
+var cookieParser = require('cookie-parser');
 const cors = require("cors");
 
-const app = express();
 const errorMiddleWare = require('./middleware/error');
-const productDetails = require('./routes/products')
+const authDetails = require('./routes/authLogin');
+const productDetails = require('./routes/products');
+const dotenv = require('dotenv'); //env variables
+dotenv.config();
+
 
 const corsOptions = {
     origin: '*',
@@ -15,10 +20,13 @@ const corsOptions = {
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 app.use(express.json());
+app.use(cookieParser())
 app.use('/uploads', express.static('uploads'));// here public is name of a folder of static file
 app.use(cors(corsOptions)) // Use this after the variable declaration
 app.set("view engine", "ejs");// Set EJS as templating engine
+
 app.use(errorMiddleWare)// middleware for error 
-app.use('/api',productDetails)
+app.use('/api', productDetails)
+app.use('/auth',authDetails)
 
 module.exports = app

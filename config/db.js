@@ -8,6 +8,4 @@ mongoose.connect(process.env.DB_URL, {
     // useUnifiedTopology: true
 }).then(() => {
     console.log('stablish')
-}).catch((e) => {
-    console.log('no connection')
 })
