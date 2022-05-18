@@ -40,7 +40,8 @@ LoginSchema.methods.getJWTToken = function () {
 
 // Compare password
 LoginSchema.methods.comparePassword = async function (enterPassword) {
-  return await bcrypt.compare(enterPassword, this.password)
+  const password = await bcrypt.hash(enterPassword, 10)
+  return await bcrypt.compare(password, this.password)
 }
 
 //Generating Password Reset Token 

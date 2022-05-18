@@ -7,7 +7,7 @@ const sendToken = require('../utils/sendToken');
 const sendEmail = require('../utils/sendEmail.js');
 
 
-// login 
+// register 
 exports.registerUser = async (req, res, next) => {
   const { email, password } = req.body
   if (!email || !password) RequestFailure(res, 400, 'Enter email and password')
@@ -22,7 +22,7 @@ exports.registerUser = async (req, res, next) => {
 
 
 
-// all users
+// all users(admin)
 exports.allUsers = async (req, res, next) => {
   await login.find().then(data => {
     if (!data) RequestFailure(res, 404, 'Users not found')
@@ -32,9 +32,8 @@ exports.allUsers = async (req, res, next) => {
 
 
 
-// single user data
+// single user data(login)
 exports.loginUser = async (req, res, next) => {
-  console.log(req.body)
   await login.findOne({ email: req.body.email }).then(async (user) => {
     if (!user) RequestFailure(res, 404, 'User not found')
     const result = await user.comparePassword(req.body?.password)
@@ -45,7 +44,6 @@ exports.loginUser = async (req, res, next) => {
 
 // profile 
 exports.profileDetails = async (req, res, next) => {
-  console.log(req, req.user)
   await login.findById(req.user.id).then((user) => {
     if (!user) RequestFailure(res, 404, 'User not found')
     RequestSuccess(res, 200, user)
@@ -94,7 +92,7 @@ exports.forgotPassword = async (req, res, next) => {
   } catch (e) { RequestFailure(res, 500, e?.message || 'Bad request') }
 }
 
-//  Forget Password
+//  Reset Password
 exports.resetPassword = async (req, res, next) => {
   try {
     const resetPasswordToken = crypto
@@ -119,11 +117,9 @@ exports.resetPassword = async (req, res, next) => {
 
 // update password (old ,new ,confirm password)
 exports.updatePassword = async (req, res, next) => {
-  console.log(req.user)
   await login.findById(req.user.id).then(async (user) => {
     if (!user) RequestFailure(res, 404, 'User not found')
     const isPasswordMatched = await user.comparePassword(req.body.oldPassword)
-    console.log(user,isPasswordMatched,req.body)
     if (!isPasswordMatched) RequestFailure(res, 400, 'Old password is incorrect')
     else if (req.body?.newPassword !== req.body?.confirmPassword) RequestFailure(res, 400, "Password doesn't match.")
     user.password = req.body?.newPassword

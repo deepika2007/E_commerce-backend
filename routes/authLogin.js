@@ -4,13 +4,15 @@ const { registerUser, allUsers, loginUser, logout, forgotPassword, resetPassword
 const { isAuthenticatedUser, authorizeRole } = require('../utils/authCheck');
 
 // login
-router.route('/register').post(registerUser)
-router.route('/users').get(isAuthenticatedUser, authorizeRole('admin'), allUsers)
-router.route('/login').post(loginUser)
-router.route('/profile').get(isAuthenticatedUser, profileDetails)
-router.route('/logout').get(isAuthenticatedUser, logout);
-router.route('/password/forgot').post(forgotPassword);
-router.route('/password/reset/:token').put(resetPassword);
-router.route('/password/update').put(isAuthenticatedUser, updatePassword);
+router.route('/register').post(registerUser) //register
+router.route('/login').post(loginUser) //login
+router.route('/profile').get(isAuthenticatedUser, profileDetails) //user data
+router.route('/password/forgot').post(forgotPassword); // forgot password
+router.route('/password/reset/:token').put(resetPassword); // reset passowrd
+router.route('/logout').get(isAuthenticatedUser, logout); // logout
+router.route('/users').get(isAuthenticatedUser, authorizeRole('admin'), allUsers) // all user data for admin
+router.route('/password/update').put(isAuthenticatedUser, updatePassword); //don't use right now
+
+
 
 module.exports = router
