@@ -13,7 +13,7 @@ exports.isAuthenticatedUser = async (req, res, next) => {
     const decodeData = jwt.verify(token, process.env.JWT_SECRET)
     req.user = await login.findById(decodeData.id)
     next()
-  } catch (e) { console.log('catch err', e) }
+  } catch (e) { RequestFailure(res, 500, e.message||'Bad request') }
 }
 
 

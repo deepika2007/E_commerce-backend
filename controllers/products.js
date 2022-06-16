@@ -1,4 +1,4 @@
-const ProductModel = require('../Models/products');
+const ProductModel = require('../models/products');
 const ErrHandler = require('../utils/errorHandler');
 const dotenv = require('dotenv'); //env variables
 dotenv.config();
@@ -6,17 +6,17 @@ const { RequestSuccess, RequestFailure } = require('../utils/Status')
 const ApiFeature = require('../utils/apiFeatures');
 
 // file uploader 
-const createProduct = async (req, res, next) => {
+exports.createProduct = async (req, res, next) => {
     try {
-        const createProducts = await ProductModel.save(req.body)
-        if (!createProducts) next(new ErrHandler('Product not found', 404))
+        const newProduct = new ProductModel(req.body)
+        const createProducts = await newProduct.save()
+        if (!createProducts) RequestFailure(res, 400, 'Something went wrong.')
         RequestSuccess(res, 201, createProducts)
-    } catch (e) { next(e.message) }
+    } catch (e) { RequestFailure(res, 500, e.message) }
 };
 
 // all Product data
-
-const showAllProduct = async (req, res) => {
+exports.showAllProduct = async (req, res, next) => {
     try {
         const apiFeature = new ApiFeature(ProductModel.find(), req.query).search().pagination();     //in pagination function pass limit value 
         const data = await apiFeature.query;
@@ -27,36 +27,33 @@ const showAllProduct = async (req, res) => {
 
 
 // Product data by id 
-
-const showOneProduct = async (req, res) => {
+exports.showOneProduct = async (req, res, next) => {
     try {
         const _id = req.params.id
         const data = await ProductModel.findById(_id);
-        if (!data) next(new ErrHandler('Product not found', 404))
+        if (!data) RequestFailure(res, 404, 'Product not found')
         else RequestSuccess(res, 200, data)
     } catch (e) { RequestFailure(res, 500, e.message) }
 }
 
 // update Product
-const updateProduct = async (req, res) => {
+exports.updateProduct = async (req, res, next) => {
     try {
         const _id = req.params.id
         const data = await ProductModel.findByIdAndUpdate(_id, req.body, {
             new: true
         });
-        if (!_id) return next(new ErrHandler('Product not found', 404))
+        if (!_id) RequestFailure(res, 404, 'Product not found')
         else RequestSuccess(res, 200, data)
     } catch (e) { RequestFailure(res, 500, e.message) }
 }
 
 // delete Product 
-const deleteProduct = async (req, res) => {
+exports.deleteProduct = async (req, res, next) => {
     try {
         const _id = req.params.id
         const data = await ProductModel.findByIdAndDelete(_id);
-        if (!_id) return next(new ErrHandler('Product not found', 404))
+        if (!_id) RequestFailure(res, 404, 'Product not found')
         else RequestSuccess(res, 200, data)
     } catch (e) { RequestFailure(res, 500, e.message) }
 }
-
-module.exports = { createProduct, showAllProduct, showOneProduct, updateProduct, deleteProduct }
