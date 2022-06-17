@@ -7,6 +7,7 @@ const cors = require("cors");
 const errorMiddleWare = require('./middleware/error');
 const authDetails = require('./routes/authLogin');
 const productDetails = require('./routes/products');
+const wishlistRouter = require('./routes/wishlist')
 const dotenv = require('dotenv'); //env variables
 dotenv.config();
 
@@ -28,5 +29,6 @@ app.set("view engine", "ejs");// Set EJS as templating engine
 app.use(errorMiddleWare)// middleware for error 
 app.use('/api', productDetails)
 app.use('/auth',authDetails)
+app.use('/wishlist', wishlistRouter)
 
 module.exports = app
