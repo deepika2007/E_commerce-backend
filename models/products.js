@@ -28,18 +28,17 @@ const ProductSchema = new mongoose.Schema({
     ],
     category: {
         type: String,
-        required: [true,'Please add product category']
+        required: [true, 'Please add product category']
     },
-    stock:{
+    stock: {
         type: Number,
-        required: [true,'Please add product stock']
+        required: [true, 'Please add product stock']
     },
-    createdAt:{
-        type:Date,
-        default:Date.now
+    createdAt: {
+        type: Date,
+        default: Date.now
     }
 
 })
 
-const ProductsModel = new mongoose.model('Products', ProductSchema);
-module.exports = ProductsModel;
+module.exports =new mongoose.model('Product', ProductSchema);

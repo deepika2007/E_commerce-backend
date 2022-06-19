@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
-const bcrypt = require('bcrypt')
+const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto')
 
@@ -40,8 +40,7 @@ LoginSchema.methods.getJWTToken = function () {
 
 // Compare password
 LoginSchema.methods.comparePassword = async function (enterPassword) {
-  const password = await bcrypt.hash(enterPassword, 10)
-  return await bcrypt.compare(password, this.password)
+  return bcrypt.compareSync(enterPassword, this.password)
 }
 
 //Generating Password Reset Token 

@@ -9,47 +9,52 @@ const sendEmail = require('../utils/sendEmail.js');
 
 // register 
 exports.registerUser = async (req, res, next) => {
-  const { email, password } = req.body
-  if (!email || !password) RequestFailure(res, 400, 'Enter email and password')
-
-  const userData = new login({ email, password })
-
-  await userData.save().then(createBlog => {
-    if (!createBlog) RequestFailure(res, 400, err?.message || 'Bad request')
-    sendToken(createBlog, 201, res)
-  }).catch(err => RequestFailure(res, 400, err?.message || 'Bad request'))
+  try {
+    const { email, password } = req.body
+    if (!email || !password) RequestFailure(res, 400, 'Enter email and password')
+    else {
+      const userData = new login({ email, password })
+      await userData.save().then(createBlog => {
+        if (!createBlog) RequestFailure(res, 400, err?.message || 'Bad request')
+        sendToken(createBlog, 201, res)
+      }).catch(err => RequestFailure(res, 400, err?.message || 'Bad request'))
+    }
+  } catch (err) { RequestFailure(res, 400, err?.message || 'Bad request') }
 }
-
-
-
-// all users(admin)
-exports.allUsers = async (req, res, next) => {
-  await login.find().then(data => {
-    if (!data) RequestFailure(res, 404, 'Users not found')
-    RequestSuccess(res, 200, data)
-  }).catch((err) => RequestFailure(res, 404, err?.message || 'Bad request'));
-}
-
 
 
 // single user data(login)
 exports.loginUser = async (req, res, next) => {
-  await login.findOne({ email: req.body.email }).then(async (user) => {
-    if (!user) RequestFailure(res, 404, 'User not found')
-    const result = await user.comparePassword(req.body?.password)
-    if (!result) RequestFailure(res, 404, 'Invalid email or password')
-    sendToken(user, 201, res)
-  }).catch((e) => RequestFailure(res, 500, e?.message || 'Bad request'))
+  await login.findOne({ email: req.body.email }).exec(async (err, user) => {
+    if (err) RequestFailure(res, 500, err.message || 'Bad request')
+    if (user) {
+      const result = await user.comparePassword(req.body?.password)
+      if (!result) RequestFailure(res, 404, 'Invalid email or password')
+      else sendToken(user, 201, res)
+    }
+  })
 }
 
-// profile 
+// profile (user)
 exports.profileDetails = async (req, res, next) => {
-  await login.findById(req.user.id).then((user) => {
+  await login.findById(req.user.id).exec(async (err, user) => {
+    if (err) RequestFailure(res, 500, err?.message || 'Bad request')
     if (!user) RequestFailure(res, 404, 'User not found')
-    RequestSuccess(res, 200, user)
-  }).catch((e) => RequestFailure(res, 500, e?.message || 'Bad request'))
+    else RequestSuccess(res, 200, user)
+  })
 }
 
+// profile  update(user)
+exports.profileUpdate = async (req, res, next) => {
+  await login.findById(req.user.id).exec(async (err, user) => {
+    if (err) RequestFailure(res, 500, err?.message || 'Bad request')
+    if (!user) RequestFailure(res, 404, 'User not found')
+    else await login.findByIdAndUpdate(req.user.id, req.body, { new: true }).then(updateUser => {
+      if (!updateUser) { RequestFailure(res, 404, 'User not updated !') }
+      else RequestSuccess(res, 200, updateUser)
+    })
+  })
+}
 
 // logout user
 exports.logout = (req, res, next) => {
@@ -77,7 +82,7 @@ exports.forgotPassword = async (req, res, next) => {
       try {
         await sendEmail.sendEmail({
           email: user.email,
-          subject: `Products password Recovery`,
+          subject: `Product password Recovery`,
           message
         })
         RequestSuccess(res, 200, { message: `Email send to ${user?.email} successfully ` })
@@ -120,9 +125,44 @@ exports.updatePassword = async (req, res, next) => {
   await login.findById(req.user.id).then(async (user) => {
     if (!user) RequestFailure(res, 404, 'User not found')
     const isPasswordMatched = await user.comparePassword(req.body.oldPassword)
+    console.log(req.body.oldPassword, isPasswordMatched)
     if (!isPasswordMatched) RequestFailure(res, 400, 'Old password is incorrect')
     else if (req.body?.newPassword !== req.body?.confirmPassword) RequestFailure(res, 400, "Password doesn't match.")
     user.password = req.body?.newPassword
     await user.save();
   }).catch((e) => RequestFailure(res, 500, e?.message || 'Bad request'))
 }
+
+// apis for admin
+
+// all users (admin)
+exports.allUsers = async (req, res, next) => {
+  await login.find().then(data => {
+    if (!data) RequestFailure(res, 404, 'Users not found')
+    RequestSuccess(res, 200, data)
+  }).catch((err) => RequestFailure(res, 404, err?.message || 'Bad request'));
+}
+
+// single user Data (admin)
+exports.singleUser = async (req, res, next) => {
+  await login.findById(req.params.id).then(data => {
+    if (!data) RequestFailure(res, 404, 'User not found')
+    RequestSuccess(res, 200, data)
+  }).catch((err) => RequestFailure(res, 404, err?.message || 'Bad request'));
+}
+
+// delete user only for admin
+exports.deleteUser = async (req, res, next) => {
+  await login.findById(req.params.id).then(async (user) => {
+    if (!user) RequestFailure(res, 404, 'User not found')
+    await login.findByIdAndDelete(req.params.id).then(updateUser => {
+      if (!updateUser) { RequestFailure(res, 404, 'User not updated !') }
+      RequestSuccess(res, 200, { message: `${updateUser.email} deleted successfully !` })
+    })
+  }).catch((e) => RequestFailure(res, 500, e?.message || 'Bad request'))
+}
+
+// google login
+// exports.google = async (req, res, next) => {
+
+// }

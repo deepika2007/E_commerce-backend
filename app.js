@@ -7,9 +7,10 @@ const cors = require("cors");
 const errorMiddleWare = require('./middleware/error');
 const authDetails = require('./routes/authLogin');
 const productDetails = require('./routes/products');
+const wishlistRouter = require('./routes/wishlist')
+const cartRouter = require('./routes/cart')
 const dotenv = require('dotenv'); //env variables
 dotenv.config();
-
 
 const corsOptions = {
     origin: '*',
@@ -26,7 +27,9 @@ app.use(cors(corsOptions)) // Use this after the variable declaration
 app.set("view engine", "ejs");// Set EJS as templating engine
 
 app.use(errorMiddleWare)// middleware for error 
-app.use('/api', productDetails)
-app.use('/auth',authDetails)
+app.use('/api', productDetails) // product
+app.use('/auth',authDetails) // auth
+app.use('/wishlist', wishlistRouter) //wishlist
+app.use('/cart', cartRouter) //cart
 
 module.exports = app
