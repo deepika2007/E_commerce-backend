@@ -1,6 +1,6 @@
 const express = require('express');
 const { addToWishlist, getWishlist, deleteWishlist,getAllWishlist } = require('../controllers/wishlist');
-const { isAuthenticatedUser } = require('../utils/authCheck');
+const { isAuthenticatedUser,authorizeRole } = require('../utils/authCheck');
 const router = express.Router()
 
 router.route('/').get(isAuthenticatedUser, getWishlist)
