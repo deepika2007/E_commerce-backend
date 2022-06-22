@@ -7,7 +7,6 @@ var storage = multer.diskStorage({
         cb(null, docPath)
     },
     filename: function (req, file, cb) {
-        var type = file.mimetype.split('/');
         cb(null, Date.now() + path.extname(file.originalname));
     }
 })

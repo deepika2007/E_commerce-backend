@@ -5,10 +5,19 @@ dotenv.config();
 const { RequestSuccess, RequestFailure } = require('../utils/Status')
 const ApiFeature = require('../utils/apiFeatures');
 
+const productPayload = (req) => {
+    const { name, description, price, category, stock } = req.body;
+    const thumbnail = req?.files?.map((file) => {
+        return { url: `http://localhost:8000/${file?.path}` }
+    })
+    return { name, description, price, category, stock, thumbnail }
+}
+
 // file uploader 
 exports.createProduct = async (req, res, next) => {
     try {
-        const newProduct = new ProductModel(req.body)
+        const product = productPayload(req);
+        const newProduct = new ProductModel(product)
         const createProducts = await newProduct.save()
         if (!createProducts) RequestFailure(res, 400, 'Something went wrong.')
         RequestSuccess(res, 201, createProducts)
@@ -39,8 +48,10 @@ exports.showOneProduct = async (req, res, next) => {
 // update Product
 exports.updateProduct = async (req, res, next) => {
     try {
-        const _id = req.params.id
-        const data = await ProductModel.findByIdAndUpdate(_id, req.body, {
+        const _id = req.params.id;
+        const product = productPayload(req);
+        const payload = req.files?.length ? product : req.body;
+        const data = await ProductModel.findByIdAndUpdate(_id, payload, {
             new: true
         });
         if (!_id) RequestFailure(res, 404, 'Product not found')
