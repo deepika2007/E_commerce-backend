@@ -27,7 +27,7 @@ exports.createProduct = async (req, res, next) => {
 // all Product data
 exports.showAllProduct = async (req, res, next) => {
     try {
-        const apiFeature = new ApiFeature(ProductModel.find(), req.query).search().pagination();     //in pagination function pass limit value 
+        const apiFeature = new ApiFeature(ProductModel.find(), req.query).search().filter().pagination();      //in pagination function pass limit value 
         const data = await apiFeature.query;
         if (!data) RequestFailure(res, 404, 'Products not found')
         else RequestSuccess(res, 200, data)

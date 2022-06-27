@@ -10,8 +10,8 @@ class ApiFeature {
       ? {
         "$or": [
           { name: { $regex: this.queryStr.search, $options: 'i' } },
+          { slug: { $regex: this.queryStr.search, $options: 'i' } },
           { description: { $regex: this.queryStr.search, $options: 'i' } },
-          { category: { $regex: this.queryStr.search, $options: 'i' } }
         ]
       } : []
     this.query = this.query.find({ ...keyword })
@@ -21,7 +21,17 @@ class ApiFeature {
   // filter api
   filter() {
     const queryCopy = { ...this.queryStr }
+    const removeFields = ["keyword", "page", "limit"];
+    removeFields.forEach((key) => delete queryCopy[key]);
+
+    // filter for price and rating
+    let queryStr = JSON.stringify(queryCopy);
+    queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, (key) => `$${key}`);
+
+    this.query = this.query.find(JSON.parse(queryStr));
+    return this;
   }
+
 
   // pagination api
   pagination(resultPerPage) {
