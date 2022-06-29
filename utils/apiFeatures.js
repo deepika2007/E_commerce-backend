@@ -34,10 +34,10 @@ class ApiFeature {
 
 
   // pagination api
-  pagination(resultPerPage) {
-    const currentPage = Number(this.queryStr.page) || 1;
-    const skip = resultPerPage * (currentPage - 1)
-    if (!isNaN(skip)) { this.query = this.query.limit(resultPerPage).skip(skip) }
+  pagination() {
+    // limit ->like 10/20/30
+    // page ->offset 0/1/2
+     this.query = this.query.limit(this.queryStr.limit).skip(this.queryStr.page) 
     return this;
   }
 }
