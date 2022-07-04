@@ -14,10 +14,10 @@ exports.registerUser = async (req, res, next) => {
     if (!email || !password) RequestFailure(res, 400, 'Enter email and password')
     else {
       const userData = new login({ email, password })
-      await userData.save().then(createBlog => {
-        if (!createBlog) RequestFailure(res, 400, err?.message || 'Bad request')
-        sendToken(createBlog, 201, res)
-      }).catch(err => RequestFailure(res, 400, err?.message || 'Bad request'))
+      await userData.save().exec((err, user) => {
+        if (err) RequestFailure(res, 400, err?.message || 'Bad request')
+        else if (user) sendToken(user, 201, res)
+      })
     }
   } catch (err) { RequestFailure(res, 400, err?.message || 'Bad request') }
 }
