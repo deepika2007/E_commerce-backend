@@ -37,7 +37,7 @@ exports.loginUser = async (req, res, next) => {
 
 // profile (user)
 exports.profileDetails = async (req, res, next) => {
-  await login.findById(req.user.id).exec(async (err, user) => {
+  await login.findById(req.user.id, 'email role _id').exec(async (err, user) => {
     if (err) RequestFailure(res, 500, err?.message || 'Bad request')
     if (!user) RequestFailure(res, 404, 'User not found')
     else RequestSuccess(res, 200, user)
@@ -49,7 +49,7 @@ exports.profileUpdate = async (req, res, next) => {
   await login.findById(req.user.id).exec(async (err, user) => {
     if (err) RequestFailure(res, 500, err?.message || 'Bad request')
     if (!user) RequestFailure(res, 404, 'User not found')
-    else await login.findByIdAndUpdate(req.user.id, req.body, { new: true }).then(updateUser => {
+    else await login.findByIdAndUpdate(req.user.id, req.body, { new: true }).select({ 'password': 0, '__v': 0 }).then(updateUser => {
       if (!updateUser) { RequestFailure(res, 404, 'User not updated !') }
       else RequestSuccess(res, 200, updateUser)
     })
@@ -128,7 +128,7 @@ exports.updatePassword = async (req, res, next) => {
     console.log(req.body.oldPassword, isPasswordMatched)
     if (!isPasswordMatched) RequestFailure(res, 400, 'Old password is incorrect')
     else if (req.body?.newPassword !== req.body?.confirmPassword) RequestFailure(res, 400, "Password doesn't match.")
-    user.password = req.body?.newPassword
+    else user.password = req.body?.newPassword
     await user.save();
   }).catch((e) => RequestFailure(res, 500, e?.message || 'Bad request'))
 }
@@ -137,17 +137,17 @@ exports.updatePassword = async (req, res, next) => {
 
 // all users (admin)
 exports.allUsers = async (req, res, next) => {
-  await login.find().then(data => {
+  await login.find().select('email role _id').then(data => {
     if (!data) RequestFailure(res, 404, 'Users not found')
-    RequestSuccess(res, 200, data)
+    else RequestSuccess(res, 200, data)
   }).catch((err) => RequestFailure(res, 404, err?.message || 'Bad request'));
 }
 
 // single user Data (admin)
 exports.singleUser = async (req, res, next) => {
-  await login.findById(req.params.id).then(data => {
+  await login.findById(req.params.id,'email role _id').then(data => {
     if (!data) RequestFailure(res, 404, 'User not found')
-    RequestSuccess(res, 200, data)
+    else RequestSuccess(res, 200, data)
   }).catch((err) => RequestFailure(res, 404, err?.message || 'Bad request'));
 }
 
