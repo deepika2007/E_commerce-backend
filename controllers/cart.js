@@ -11,6 +11,12 @@ exports.getCart = async (req, res, next) => {
         }
       })
       .then((response) => {
+        response?.map((data) => {
+          data.items = data.items.filter((item) => {
+            if (!item.isDeleted && item.quantity > 0) return true;
+            else return false;
+          })
+        })
         if (response) RequestSuccess(res, 200, response);
         else RequestFailure(res, 500, e.message)
       })
@@ -27,11 +33,11 @@ exports.addCart = async (req, res, next) => {
       if (cart) {
         // if some items in cart 
         const isItemAdded = cart.items.find((v) => v.product == product)
-        let condition, logic;
+        let filter, condition;
         if (isItemAdded) {
           // if same items added in cart and update quantity
-          condition = { 'owner': req.user._id, "items.product": product }
-          logic = {
+          filter = { 'owner': req.user._id, "items.product": product }
+          condition = {
             "$set": {
               "items.$": {
                 ...req.body.items,
@@ -41,14 +47,14 @@ exports.addCart = async (req, res, next) => {
           }
         } else {
           //  if add other items into cart items  
-          condition = { 'owner': req.user._id }
-          logic = {
+          filter = { 'owner': req.user._id }
+          condition = {
             "$push": {
               "items": req.body.items
             }
           }
         }
-        await cartSchema.findOneAndUpdate(condition, logic).exec((err, data) => {
+        await cartSchema.findOneAndUpdate(filter, condition).exec((err, data) => {
           if (err) RequestFailure(res, 500, err.message || 'Bad request')
           else RequestSuccess(res, 200, { message: 'Product updated into cart.' })
         })
@@ -72,9 +78,20 @@ exports.addCart = async (req, res, next) => {
 exports.deleteCart = async (req, res, next) => {
   console.log('req.params.id', req.params.id, cartSchema)
   try {
-    const response = await cartSchema.findByIdAndDelete(req.params.id)
-    if (response) RequestSuccess(res, 200, { message: 'Successfully removed from cart !' })
-    else RequestFailure(res, 500, 'Bad request')
+    await cartSchema.findOne(req.user._id).exec((err, response) => {
+      if (err) RequestFailure(res, 500, 'Bad request')
+      if (response) {
+        response?.items.forEach(element => {
+          if (element._id.toString() === req.params.id.toString()) {
+            element.isDeleted = true;
+            response.save().then((result) => {
+              if (result) RequestSuccess(res, 200, { message: 'Successfully removed from cart !' })
+              else RequestFailure(res, 500, 'Bad request')
+            })
+          }
+        });
+      }
+    })
   } catch (e) { RequestFailure(res, 500, e.message || 'Bad request') }
 }
 
