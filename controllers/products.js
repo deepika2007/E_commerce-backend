@@ -2,6 +2,7 @@ const ProductModel = require('../models/products');
 const ErrHandler = require('../utils/errorHandler');
 const dotenv = require('dotenv'); //env variables
 dotenv.config();
+const { default: slugify } = require('slugify');
 const { RequestSuccess, RequestFailure } = require('../utils/Status')
 const ApiFeature = require('../utils/apiFeatures');
 
@@ -16,11 +17,15 @@ const productPayload = (req) => {
 // file uploader 
 exports.createProduct = async (req, res, next) => {
     try {
-        const product = productPayload(req);
-        const newProduct = new ProductModel(product)
-        const createProducts = await newProduct.save()
-        if (!createProducts) RequestFailure(res, 400, 'Something went wrong.')
-        RequestSuccess(res, 201, createProducts)
+        const { name, description, price, category, stock } = req.body;
+        const thumbnail = req.files?.map((file) => {
+            return { url: `http://localhost:8000/${file?.path}` }
+        })
+        const product = { name, slug: slugify(name), description, price, category, stock, thumbnail }
+        const createPayload = new ProductSchema(product)
+        const createProducts = await createPayload.save()
+        if (!createProducts) RequestFailure(res, 404, 'Product not found')
+        else RequestSuccess(res, 201, { message: 'Product added successfully !' })
     } catch (e) { RequestFailure(res, 500, e.message) }
 };
 
@@ -48,13 +53,17 @@ exports.showOneProduct = async (req, res, next) => {
 // update Product
 exports.updateProduct = async (req, res, next) => {
     try {
-        const _id = req.params.id;
-        const product = productPayload(req);
+        const _id = req.params.id
+        const { name, description, price, category, stock } = req.body;
+        const thumbnail = req.files?.map((file) => {
+            return { url: `http://localhost:8000/${file?.path}` }
+        })
+        const product = { name, description, price, category, stock, thumbnail }
         const payload = req.files?.length ? product : req.body;
-        const data = await ProductModel.findByIdAndUpdate(_id, payload, {
+        const data = await ProductSchema.findByIdAndUpdate(_id, payload, {
             new: true
         });
-        if (!_id) RequestFailure(res, 404, 'Product not found')
+        if (!data) return RequestFailure(res, 404, 'Product not found')
         else RequestSuccess(res, 200, data)
     } catch (e) { RequestFailure(res, 500, e.message) }
 }
