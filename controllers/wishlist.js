@@ -5,17 +5,21 @@ exports.addToWishlist = async (req, res, next) => {
   try {
     if (!req.params.id) RequestFailure(res, 400, 'Bad request')
     else {
-      const includeWish = await Wishlist.find({ product: req.params.id, isDeleted: false, user: req.user._id })
-      if (includeWish.length) RequestFailure(res, 500, 'Product already exist in wishlist ! ')
-      else {
-        const wishlist = new Wishlist({
-          product: req.params.id,
-          user: req.user._id
-        })
-        const addWishlist = await wishlist.save()
-        if (!addWishlist) RequestFailure(res, 400, 'Bad request')
-        else RequestSuccess(res, 200, { message: `Successfully added into wishlists.` })
-      }
+      await Wishlist.findOne({ product: req.params.id }).exec(async (err, data) => {
+        if (err) RequestFailure(res, 500, err.message);
+        if (data?.isDeleted) {
+          data.isDeleted = false;
+          data.save().then(() => RequestSuccess(res, 200, { message: `Successfully added into wishlists.` }));
+        } else {
+          const wishlist = new Wishlist({
+            product: req.params.id,
+            user: req.user._id
+          })
+          const addWishlist = await wishlist.save()
+          if (!addWishlist) RequestFailure(res, 400, 'Bad request')
+          else RequestSuccess(res, 200, { message: `Successfully added into wishlists.` })
+        }
+      })
     }
   } catch (e) { RequestFailure(res, 500, e.message) }
 }
@@ -24,25 +28,16 @@ exports.addToWishlist = async (req, res, next) => {
 // wishlist based on user 
 exports.getWishlist = async (req, res, next) => {
   try {
-    await Wishlist.find({ user: req.user._id, isDeleted: false }).populate('product').then(async (data) => {
+    await Wishlist.find({ user: req.user._id, isDeleted: false }, '_id product user').populate('product').exec(async (err, data) => {
+      if (err) { RequestFailure(res, 500, err.message) }
       // filter wishlist data based on user (user token)
       const wishlistData = data.filter((result) => {
         if (result.user.toString() === req.user._id.toString()) return true
         return false
       })
-      // create custom response for user 
-      const responseData = []
-      for (let wish of wishlistData) {
-        const customResponse = {
-          _id: wish._id,
-          product: wish.product,
-          user: wish.user
-        }
-        responseData.push(customResponse)
-      }
-      if (!responseData) RequestFailure(res, 400, 'Bad request')
-      else RequestSuccess(res, 200, responseData)
-    }).catch((e) => RequestFailure(res, 500, e.message))
+      if (!wishlistData) RequestFailure(res, 400, 'Bad request')
+      else RequestSuccess(res, 200, wishlistData)
+    })
   } catch (e) { RequestFailure(res, 500, e.message) }
 }
 
