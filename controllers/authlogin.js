@@ -6,7 +6,6 @@ const login = require('../models/authlogin');
 const sendToken = require('../utils/sendToken');
 const sendEmail = require('../utils/sendEmail.js');
 
-
 // register 
 exports.registerUser = async (req, res, next) => {
   try {
@@ -21,7 +20,6 @@ exports.registerUser = async (req, res, next) => {
     }
   } catch (err) { RequestFailure(res, 400, err?.message || 'Bad request') }
 }
-
 
 // single user data(login)
 exports.loginUser = async (req, res, next) => {
