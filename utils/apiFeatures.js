@@ -35,8 +35,8 @@ class ApiFeature {
 
   // pagination api
   pagination() {
-    // limit ->like 10/20/30
-    // page ->offset 0/1/2
+    // limit- 10/20/30
+    // page- offset 0/1/2
      this.query = this.query.limit(this.queryStr.limit).skip(this.queryStr.page) 
     return this;
   }
