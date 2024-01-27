@@ -5,7 +5,7 @@ var cookieParser = require('cookie-parser');
 const cors = require("cors");
 
 const errorMiddleWare = require('./middleware/error');
-const authDetails = require('./routes/authLogin');
+const userDetails = require('./routes/authLogin');
 const productDetails = require('./routes/products');
 const wishlistRouter = require('./routes/wishlist')
 const cartRouter = require('./routes/cart')
@@ -28,7 +28,7 @@ app.set("view engine", "ejs");// Set EJS as templating engine
 
 app.use(errorMiddleWare)// middleware for error 
 app.use('/api', productDetails) // product
-app.use('/auth',authDetails) // auth
+app.use('/auth',userDetails) // auth
 app.use('/wishlist', wishlistRouter) //wishlist
 app.use('/cart', cartRouter) //cart
 
